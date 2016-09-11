@@ -6,6 +6,10 @@
   (bind [_ f] "apply the value which this context is holding to a function f, and return a new context."))
 
 (extend-protocol Context
+  nil
+  (result [this] this)
+  (bind [this f] (f this))
+
   Object
   (result [this] this)
   (bind [this f] (f this))
