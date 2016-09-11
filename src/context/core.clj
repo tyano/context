@@ -11,7 +11,7 @@
   (bind [this f] (f this))
 
   clojure.lang.PersistentVector
-  (result [this] this)
+  (result [this] (vec (flatten this)))
   (bind [this f] (vec (flatten (map f this)))))
 
 (defrecord Maybe [v]
