@@ -50,22 +50,6 @@
   [m & body]
   `(resolve (chain-> ~m ~@body)))
 
-; (clet [c  (maybe 1)
-;        v  (+ 1 c)
-;        v2 (* 2 v)]
-;   (identity v2))
-
-
-; (let [v (bind c (fn [c] (+ 1 c)))]
-;   (let [v2 (bind c (fn [c] (bind v (fn [v] (* 2 v)))))]
-;     (bind c
-;       (fn [c]
-;         (bind v
-;           (fn [v]
-;             (bind v2
-;               (fn [v2]
-;                 (identity v2)))))))))
-
 (defn expand-context
   [{:keys [syms expr]}]
   (if (seq syms)
@@ -93,8 +77,15 @@
     `(let ~(expand-binding (first binding-context))
         (expand-let ~(rest binding-context) ~body-context))))
 
-; (defmacro clet
-;   [bindings & body]
-;   (let [[[sym expr] & others] (partition 2 bindings)
-;         binding-context (build-binding-context [{:sym sym, :syms [], :expr expr}] others)]
-;     ))
+(defmacro clet
+  "(clet [c  (maybe 1)
+          v  (+ 1 c)
+          v2 (* 2 v)]
+     (+ c v v2))
+
+   => 7"
+  [bindings & body]
+  (let [[[sym expr] & others] (partition 2 bindings)
+        binding-context (build-binding-context [{:sym sym, :syms [], :expr expr}] others)
+        body-context    {:syms (map :sym binding-context), :expr `(do ~@body)}]
+    `(expand-let ~binding-context ~body-context)))
