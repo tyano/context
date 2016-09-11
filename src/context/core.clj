@@ -42,4 +42,25 @@
   [m & body]
   `(resolve (chain-> ~m ~@body)))
 
+; (clet c [v  (+ 1 c)
+;          v2 (* 2 v)]
+;   (identity v2))
 
+(defn expand-context
+  [{:keys [syms expr]}]
+  (if (seq syms)
+    (let [[sym & r] syms
+          next-expr (expand-context {:syms r :expr expr})]
+      `(bind ~sym (fn [~sym] ~next-expr)))
+    `~expr))
+
+
+; (let [v (bind c (fn [c] (+ 1 c)))]
+;   (let [v2 (bind c (fn [c] (bind v (fn [v] (* 2 v)))))]
+;     (bind c
+;       (fn [c]
+;         (bind v
+;           (fn [v]
+;             (bind v2
+;               (fn [v2]
+;                 (identity v2)))))))))
