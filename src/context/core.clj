@@ -48,7 +48,7 @@
 
 (defmacro resolve->
   [m & body]
-  `(resolve (chain-> ~m ~@body)))
+  `(result (chain-> ~m ~@body)))
 
 (defn expand-context
   [{:keys [syms expr]}]
