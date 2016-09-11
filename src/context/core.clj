@@ -23,8 +23,8 @@
   (result [this] (result v))
   (bind
     [this f]
-    (if (some? v)
-      (Maybe. (f (result v)))
+    (if-some [r (result v)]
+      (Maybe. (f r))
       this)))
 
 (defn maybe [v] (Maybe. v))
