@@ -14,10 +14,6 @@
   (result [this] this)
   (bind [this f] (vec (flatten (map f this)))))
 
-(defn context?
-  [c]
-  (satisfies? Context c))
-
 (defrecord Maybe [v]
   Context
   (result [this] (result v))
