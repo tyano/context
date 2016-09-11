@@ -5,21 +5,29 @@
   (result [_] "return the value which this context is holding.")
   (bind [_ f] "apply the value which this context is holding to a function f, and return a new context."))
 
+(extend-protocol Context
+  Object
+  (result [this] this)
+  (bind [this f] (f this))
+
+  clojure.lang.PersistentVector
+  (result [this] this)
+  (bind [this f] (vec (flatten (map f this)))))
+
 (defn context?
   [c]
   (satisfies? Context c))
 
 (defrecord Maybe [v]
   Context
-  (result [this] v)
-  (bind [this f] (if (some? v) (->Maybe (f v)) this)))
+  (result [this] (result v))
+  (bind
+    [this f]
+    (if (some? v)
+      (Maybe. (f (result v)))
+      this)))
 
 (defn maybe [v] (Maybe. v))
-
-(extend-type clojure.lang.PersistentVector
-  Context
-  (result [this] this)
-  (bind [this f] (vec (flatten (map f this)))))
 
 (defn chain
   [m & fs]
@@ -42,17 +50,10 @@
   [m & body]
   `(resolve (chain-> ~m ~@body)))
 
-; (clet c [v  (+ 1 c)
-;          v2 (* 2 v)]
+; (clet [c  (maybe 1)
+;        v  (+ 1 c)
+;        v2 (* 2 v)]
 ;   (identity v2))
-
-(defn expand-context
-  [{:keys [syms expr]}]
-  (if (seq syms)
-    (let [[sym & r] syms
-          next-expr (expand-context {:syms r :expr expr})]
-      `(bind ~sym (fn [~sym] ~next-expr)))
-    `~expr))
 
 
 ; (let [v (bind c (fn [c] (+ 1 c)))]
@@ -64,3 +65,36 @@
 ;             (bind v2
 ;               (fn [v2]
 ;                 (identity v2)))))))))
+
+(defn expand-context
+  [{:keys [syms expr]}]
+  (if (seq syms)
+    (let [[sym & r] syms
+          next-expr (expand-context {:syms r :expr expr})]
+      `(bind ~sym (fn [~sym] ~next-expr)))
+    `~expr))
+
+(defn expand-binding
+  [{:keys [sym syms expr] :as ctx}]
+  `[~sym ~(expand-context ctx)])
+
+(defn build-binding-context
+  [first-data data-coll]
+  (reduce
+    (fn [results pair]
+      (conj results {:sym (first pair) :syms (map :sym results) :expr (second pair)}))
+    first-data
+    data-coll))
+
+(defmacro expand-let
+  [binding-context body-context]
+  (if-not (seq binding-context)
+    `(result ~(expand-context body-context))
+    `(let ~(expand-binding (first binding-context))
+        (expand-let ~(rest binding-context) ~body-context))))
+
+; (defmacro clet
+;   [bindings & body]
+;   (let [[[sym expr] & others] (partition 2 bindings)
+;         binding-context (build-binding-context [{:sym sym, :syms [], :expr expr}] others)]
+;     ))
