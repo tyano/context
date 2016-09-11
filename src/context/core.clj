@@ -50,7 +50,7 @@
   [m & body]
   `(result (chain-> ~m ~@body)))
 
-(defn expand-context
+(defn- expand-context
   [{:keys [syms expr]}]
   (if (seq syms)
     (let [[sym & r] syms
@@ -58,11 +58,11 @@
       `(bind ~sym (fn [~sym] ~next-expr)))
     `~expr))
 
-(defn expand-binding
+(defn- expand-binding
   [{:keys [sym syms expr] :as ctx}]
   `[~sym ~(expand-context ctx)])
 
-(defn build-binding-context
+(defn- build-binding-context
   [first-data data-coll]
   (reduce
     (fn [results pair]
