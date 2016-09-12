@@ -18,7 +18,7 @@
   (result [this] (vec this))
   (bind [this f] (vec (map f this))))
 
-(defrecord Maybe [v]
+(deftype Maybe [v]
   Context
   (result [this] (result v))
   (bind
