@@ -51,22 +51,23 @@
   `(result (chain-> ~m ~@body)))
 
 (defn- expand-context
-  [{:keys [syms expr]}]
+  [{:keys [syms variables expr]}]
   (if (seq syms)
-    (let [[sym & r] syms
-          next-expr (expand-context {:syms r :expr expr})]
-      `(bind ~sym (fn [~sym] ~next-expr)))
+    (let [[sym & symr] syms
+          [v & vr] variables
+          next-expr (expand-context {:syms symr :variables vr :expr expr})]
+      `(bind ~sym (fn [~v] ~next-expr)))
     `~expr))
 
 (defn- expand-binding
-  [{:keys [sym syms expr] :as ctx}]
+  [{:keys [sym syms variable variables expr] :as ctx}]
   `[~sym ~(expand-context ctx)])
 
 (defn- build-binding-context
   [first-data data-coll]
   (reduce
     (fn [results pair]
-      (conj results {:sym (first pair) :syms (map :sym results) :expr (second pair)}))
+      (conj results {:sym (gensym), :variable (first pair) :syms (map :sym results) :variables (map :variable results) :expr (second pair)}))
     first-data
     data-coll))
 
@@ -78,14 +79,13 @@
         (expand-let ~(rest binding-context) ~body-context))))
 
 (defmacro clet
-  "(clet [c  (maybe 1)
-          v  (+ 1 c)
-          v2 (* 2 v)]
-     (+ c v v2))
+  "(clet [[v1 v2] (maybe [1 2])
+          [v3 v4] (vector (inc v1) (inc v2))]
+     (+ v1 v2 v3 v4))
 
-   => 7"
+   => 8"
   [bindings & body]
-  (let [[[sym expr] & others] (partition 2 bindings)
-        binding-context (build-binding-context [{:sym sym, :syms [], :expr expr}] others)
-        body-context    {:syms (map :sym binding-context), :expr `(do ~@body)}]
+  (let [[[variable expr] & others] (partition 2 bindings)
+        binding-context (build-binding-context [{:sym (gensym), :variable variable :syms [], :variables [], :expr expr}] others)
+        body-context    {:syms (map :sym binding-context), :variables (map :variable binding-context) :expr `(do ~@body)}]
     `(expand-let ~binding-context ~body-context)))
