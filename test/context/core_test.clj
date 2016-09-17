@@ -9,21 +9,21 @@
   (maybe nil) => none
 
   (fact "tests for map"
-    (-> (maybe 1)
-        (map inc)
-        (map inc)
-        (map #(* % 2))
-        (result)) => 6
+    (->> (maybe 1)
+         (map inc)
+         (map inc)
+         (map #(* % 2))
+         (result)) => 6
 
-    (-> (maybe "a")
-        (map #(drop 1 %))
-        (map seq)
-        (map upper-case)
-        (result)) => nil
+    (->> (maybe "a")
+         (map #(drop 1 %))
+         (map seq)
+         (map upper-case)
+         (result)) => nil
 
-    (-> [1 2 3]
-        (map #(repeat % "A"))
-        (result)) => [["A"] ["A" "A"] ["A" "A" "A"]])
+    (->> [1 2 3]
+         (map #(repeat % "A"))
+         (result)) => [["A"] ["A" "A"] ["A" "A" "A"]])
 
   (fact "tests for bind"
     (-> (maybe 1)
@@ -105,7 +105,7 @@
 
   (maplet [v1 (maybe 1)
            v2 (maybe v1)
-           v3 (map v2 inc)]
+           v3 (map inc v2)]
     v3) => (maybe 2))
 
 (facts "Monad lows"

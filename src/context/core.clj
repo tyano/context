@@ -7,17 +7,21 @@
   (result [_] "return the value which this context is holding."))
 
 (defprotocol Functor
-  (map [_ f]  "apply the value contained in this context to f, wrap the result of f into a new same context."))
+  (fmap [_ f]  "apply the value contained in this context to f, wrap the result of f into a new same context."))
 
 (defprotocol Monad
   (bind [_ f] "apply the value contained in this context to f. f must return a new same-kind Context. return the new Context."))
+
+(defn map
+  [f data]
+  (fmap data f))
 
 (extend-type nil
   Context
   (result [this] nil)
 
   Functor
-  (map [this f] nil)
+  (fmap [this f] nil)
 
   Monad
   (bind [this f] nil))
@@ -27,7 +31,7 @@
   (result [this] (vec this))
 
   Functor
-  (map [this f] (vec (core/map f this)))
+  (fmap [this f] (vec (core/map f this)))
 
   Monad
   (bind [this f] (vec (mapcat f this))))
@@ -37,7 +41,7 @@
   (result [this] this)
 
   Functor
-  (map [this f] (f this))
+  (fmap [this f] (f this))
 
   Monad
   (bind [this f] (f this)))
@@ -49,7 +53,7 @@
   (result [this] v)
 
   Functor
-  (map
+  (fmap
     [this f]
     (if (= this none)
       none
@@ -88,7 +92,7 @@
 
 (defn chain
   [m & fs]
-  (reduce #(map %1 %2) m fs))
+  (reduce #(fmap %1 %2) m fs))
 
 (defn resolve
   [m & fs]
@@ -114,8 +118,8 @@
             [v & vr] variables
             next-expr (expand-context false {:syms symr :variables vr :expr expr})]
         (if first?
-          `(map ~sym (fn [~v] ~next-expr))
-          `(result (map ~sym (fn [~v] ~next-expr)))))
+          `(fmap ~sym (fn [~v] ~next-expr))
+          `(result (fmap ~sym (fn [~v] ~next-expr)))))
       `~expr))
   ([ctx]
     (expand-context true ctx)))
