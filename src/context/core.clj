@@ -1,33 +1,92 @@
 (ns context.core
-  (:refer-clojure :exclude [resolve]))
+  (:refer-clojure :exclude [resolve map flatten] :as core)
+  (:require [clojure.tools.logging :refer [debug info]]))
 
 (defprotocol Context
-  (result [_] "return the value which this context is holding.")
-  (bind [_ f] "apply the value which this context is holding to a function f, and return a new context."))
+  (result [_] "return the value which this context is holding."))
 
-(extend-protocol Context
-  nil
+(defprotocol Functor
+  (map [_ f]  "apply the value contained in this context to f, wrap the result of f into a new same context."))
+
+(defprotocol Monad
+  (bind [_ f] "apply the value contained in this context to f. f must return a new same-kind Context. return the new Context."))
+
+(extend-type nil
+  Context
   (result [this] this)
-  (bind [this f] (f this))
 
-  Object
+  Functor
+  (map [this f] (f this))
+
+  Monad
+  (bind [this f] (f this)))
+
+
+(extend-type Object
+  Context
   (result [this] this)
-  (bind [this f] (f this))
 
-  clojure.lang.PersistentVector
+  Functor
+  (map [this f] (f this))
+
+  Monad
+  (bind [this f] (f this)))
+
+(extend-type clojure.lang.PersistentVector
+  Context
   (result [this] (vec this))
-  (bind [this f] (vec (map f this))))
+
+  Functor
+  (map [this f] (vec (map f this)))
+
+  Monad
+  (bind [this f] (vec (mapcat f this))))
+
+
+(declare maybe?)
 
 (deftype Maybe [v]
   Context
-  (result [this] (result v))
+  (result [this] v)
+
+  Functor
+  (map
+    [this f]
+    (if (some? v)
+      (Maybe. (f v))
+      this))
+
+  Monad
   (bind
     [this f]
-    (if-some [r (result v)]
-      (Maybe. (f r))
+    (debug "f:" f)
+    (debug "v:" v)
+    (if (some? v)
+      (let [new-context (f v)]
+        (when-not (maybe? new-context)
+          (throw (IllegalStateException. "a result value of f binded to a Maybe must be a Maybe.")))
+        new-context)
       this)))
 
-(defn maybe [v] (Maybe. v))
+(defmethod print-method Maybe
+  [o ^java.io.Writer w]
+  (.write w (str (.getCanonicalName (class o)) "[" (.-v o) "]")))
+
+(defn maybe? [c] (instance? Maybe c))
+
+(def none (Maybe. nil))
+
+(defn maybe [v]
+  (if (some? v)
+    (Maybe. v)
+    none))
+
+(defn flatten-maybe
+  [c]
+  (let [value (result c)]
+    (if (instance? Maybe value)
+      (recur value)
+      value)))
 
 (defn chain
   [m & fs]
