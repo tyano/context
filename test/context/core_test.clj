@@ -52,6 +52,50 @@
         (bind #(if (= % :b) nil [(name %)]))
         (result)) => ["a" "c"]))
 
+(facts "for chain"
+  (chain (maybe 1)
+    #(+ % 1)
+    #(+ % 1)
+    #(- % 1)) => (maybe 2)
+
+  (chain (maybe 1)
+    (fn [_] nil)
+    #(+ % 1)
+    #(+ % 1)
+    #(- % 1)) => none)
+
+(facts "for resolve"
+  (resolve (maybe 1)
+    #(+ % 1)
+    #(+ % 1)
+    #(- % 1)) => 2
+
+  (resolve (maybe 1)
+    (fn [_] nil)
+    #(+ % 1)
+    #(+ % 1)
+    #(- % 1)) => nil)
+
+(facts "for chain->"
+  (chain-> (maybe 1)
+    (+ 1)
+    (* 2)) => (maybe 4)
+
+  (chain-> (maybe 1)
+    ((fn [_] nil))
+    (+ 1)
+    (* 2)) => none)
+
+(facts "for resolve->"
+  (resolve-> (maybe 1)
+    (+ 1)
+    (* 2)) => 4
+
+  (resolve-> (maybe 1)
+    ((fn [_] nil))
+    (+ 1)
+    (* 2)) => nil)
+
 (facts "for maplet"
   (maplet [[v1 v2] (maybe [1 2])
            [v3 v4] (vector (inc v1) (inc v2))]
