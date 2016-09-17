@@ -8,7 +8,8 @@
                  [org.clojure/tools.logging "0.3.1"]]
 
   :profiles {:dev {:resource-paths ["resources-dev"]
-                   :dependencies [[midje "1.8.3"]]}}
+                   :dependencies [[midje "1.8.3"]
+                                  [org.clojure/tools.namespace "0.2.11"]]}}
 
   :resource-paths ["resources" "resources-dev"]
   )

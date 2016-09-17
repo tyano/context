@@ -1,6 +1,7 @@
 (ns context.core
-  (:refer-clojure :exclude [resolve map flatten] :as core)
-  (:require [clojure.tools.logging :refer [debug info]]))
+  (:refer-clojure :exclude [resolve map flatten])
+  (:require [clojure.core :as core]
+            [clojure.tools.logging :refer [debug info]]))
 
 (defprotocol Context
   (result [_] "return the value which this context is holding."))
@@ -13,14 +14,23 @@
 
 (extend-type nil
   Context
-  (result [this] this)
+  (result [this] nil)
 
   Functor
-  (map [this f] (f this))
+  (map [this f] nil)
 
   Monad
-  (bind [this f] (f this)))
+  (bind [this f] nil))
 
+(extend-type clojure.lang.PersistentVector
+  Context
+  (result [this] (vec this))
+
+  Functor
+  (map [this f] (vec (core/map f this)))
+
+  Monad
+  (bind [this f] (vec (mapcat f this))))
 
 (extend-type Object
   Context
@@ -31,17 +41,6 @@
 
   Monad
   (bind [this f] (f this)))
-
-(extend-type clojure.lang.PersistentVector
-  Context
-  (result [this] (vec this))
-
-  Functor
-  (map [this f] (vec (map f this)))
-
-  Monad
-  (bind [this f] (vec (mapcat f this))))
-
 
 (declare maybe?)
 
@@ -59,14 +58,20 @@
   Monad
   (bind
     [this f]
-    (debug "f:" f)
-    (debug "v:" v)
     (if (some? v)
       (let [new-context (f v)]
         (when-not (maybe? new-context)
           (throw (IllegalStateException. "a result value of f binded to a Maybe must be a Maybe.")))
         new-context)
-      this)))
+      this))
+
+  Object
+  (equals
+    [a b]
+    (cond
+      (identical? a b) true
+      (not (maybe? b)) false
+      :else (= (result a) (result b)))))
 
 (defmethod print-method Maybe
   [o ^java.io.Writer w]
@@ -81,16 +86,9 @@
     (Maybe. v)
     none))
 
-(defn flatten-maybe
-  [c]
-  (let [value (result c)]
-    (if (instance? Maybe value)
-      (recur value)
-      value)))
-
 (defn chain
   [m & fs]
-  (reduce #(bind %1 %2) m fs))
+  (reduce #(map %1 %2) m fs))
 
 (defn resolve
   [m & fs]
@@ -102,7 +100,7 @@
   (letfn [(parse-expr
             [[h & r :as expr]]
             `(fn [v#] (~h v# ~@r)))]
-    (let [expr-coll (map parse-expr body)]
+    (let [expr-coll (core/map parse-expr body)]
       `(chain ~m ~@expr-coll))))
 
 (defmacro resolve->
@@ -110,13 +108,17 @@
   `(result (chain-> ~m ~@body)))
 
 (defn- expand-context
-  [{:keys [syms variables expr]}]
-  (if (seq syms)
-    (let [[sym & symr] syms
-          [v & vr] variables
-          next-expr (expand-context {:syms symr :variables vr :expr expr})]
-      `(bind ~sym (fn [~v] ~next-expr)))
-    `~expr))
+  ([first? {:keys [syms variables expr]}]
+    (if (seq syms)
+      (let [[sym & symr] syms
+            [v & vr] variables
+            next-expr (expand-context false {:syms symr :variables vr :expr expr})]
+        (if first?
+          `(map ~sym (fn [~v] ~next-expr))
+          `(result (map ~sym (fn [~v] ~next-expr)))))
+      `~expr))
+  ([ctx]
+    (expand-context true ctx)))
 
 (defn- expand-binding
   [{:keys [sym syms variable variables expr] :as ctx}]
@@ -126,7 +128,11 @@
   [first-data data-coll]
   (reduce
     (fn [results pair]
-      (conj results {:sym (gensym), :variable (first pair) :syms (map :sym results) :variables (map :variable results) :expr (second pair)}))
+      (conj results {:sym (gensym),
+                     :variable (first pair)
+                     :syms (core/map :sym results)
+                     :variables (core/map :variable results)
+                     :expr (second pair)}))
     first-data
     data-coll))
 
@@ -137,14 +143,21 @@
     `(let ~(expand-binding (first binding-context))
         (expand-let ~(rest binding-context) ~body-context))))
 
-(defmacro clet
-  "(clet [[v1 v2] (maybe [1 2])
-          [v3 v4] (vector (inc v1) (inc v2))]
+(defmacro maplet
+  "(maplet [[v1 v2] (maybe [1 2])
+            [v3 v4] (vector (inc v1) (inc v2))]
      (+ v1 v2 v3 v4))
 
    => 8"
   [bindings & body]
   (let [[[variable expr] & others] (partition 2 bindings)
-        binding-context (build-binding-context [{:sym (gensym), :variable variable :syms [], :variables [], :expr expr}] others)
-        body-context    {:syms (map :sym binding-context), :variables (map :variable binding-context) :expr `(do ~@body)}]
+        binding-context (build-binding-context [{:sym (gensym),
+                                                 :variable variable
+                                                 :syms []
+                                                 :variables []
+                                                 :expr expr}]
+                                                others)
+        body-context    {:syms (core/map :sym binding-context),
+                                         :variables (core/map :variable binding-context)
+                                         :expr `(do ~@body)}]
     `(expand-let ~binding-context ~body-context)))
