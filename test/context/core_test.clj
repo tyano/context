@@ -6,6 +6,8 @@
             [clojure.string :refer [upper-case]]))
 
 (facts "Maybe context"
+  (maybe nil) => none
+
   (fact "tests for map"
     (-> (maybe 1)
         (map inc)

@@ -42,7 +42,7 @@
   Monad
   (bind [this f] (f this)))
 
-(declare maybe?)
+(declare maybe? none)
 
 (deftype Maybe [v]
   Context
@@ -51,19 +51,19 @@
   Functor
   (map
     [this f]
-    (if (some? v)
-      (Maybe. (f v))
-      this))
+    (if (= this none)
+      none
+      (Maybe. (f v))))
 
   Monad
   (bind
     [this f]
-    (if (some? v)
+    (if (= this none)
+      none
       (let [new-context (f v)]
         (when-not (maybe? new-context)
           (throw (IllegalStateException. "a result value of f binded to a Maybe must be a Maybe.")))
-        new-context)
-      this))
+        new-context)))
 
   Object
   (equals
@@ -79,7 +79,7 @@
 
 (defn maybe? [c] (instance? Maybe c))
 
-(def none (Maybe. nil))
+(defonce ^:const none (Maybe. nil))
 
 (defn maybe [v]
   (if (some? v)
