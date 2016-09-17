@@ -7,6 +7,7 @@
 
 (facts "Maybe context"
   (maybe nil) => none
+  (maybe? none) => true
 
   (fact "tests for map"
     (->> (maybe 1)
