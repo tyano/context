@@ -105,3 +105,17 @@
            v2 (maybe v1)
            v3 (map v2 inc)]
     v3) => (maybe 2))
+
+(facts "Monad lows"
+  (-> (maybe 1) (bind #(maybe (inc %))) (result))
+      => #(= % (inc 1))
+
+  (-> (maybe 1) (bind maybe)) => (maybe 1)
+
+  (-> (maybe 1) (bind #(maybe (inc %))) (bind #(maybe (* % 2))))
+      => (fn [v]
+          (= v
+             (-> (maybe 1)
+                 (bind (fn [x] (-> (maybe (inc x))
+                                   (bind (fn [y] (maybe (* y 2)))))))))))
+
