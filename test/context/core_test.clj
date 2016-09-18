@@ -1,22 +1,21 @@
 (ns context.core-test
   (:refer-clojure :exclude [map resolve] :as core)
-  (:require [clojure.test :refer :all]
-            [context.core :refer :all]
-            [midje.sweet :refer :all]
+  (:require [context.core :refer :all]
+            [midje.sweet :refer [fact facts provided throws] :as m]
             [clojure.string :refer [upper-case]]))
 
 (facts "Maybe context"
-  (maybe nil) => none
+  (just nil) => none
   (maybe? none) => true
 
   (fact "tests for map"
-    (->> (maybe 1)
+    (->> (just 1)
          (map inc)
          (map inc)
          (map #(* % 2))
          (result)) => 6
 
-    (->> (maybe "a")
+    (->> (just "a")
          (map #(drop 1 %))
          (map seq)
          (map upper-case)
@@ -27,19 +26,19 @@
          (result)) => [["A"] ["A" "A"] ["A" "A" "A"]])
 
   (fact "tests for bind"
-    (-> (maybe 1)
-        (bind #(maybe (inc %)))
-        (bind #(maybe (inc %)))
-        (bind #(maybe (* % 2)))
+    (-> (just 1)
+        (bind #(just (inc %)))
+        (bind #(just (inc %)))
+        (bind #(just (* % 2)))
         (result)) => 6
 
-    (-> (maybe 1)
-        (bind #(maybe (inc %)))
+    (-> (just 1)
+        (bind #(just (inc %)))
         (bind (fn [_] none))
-        (bind #(maybe (* % 2)))
+        (bind #(just (* % 2)))
         (result)) => nil
 
-    (-> (maybe 1)
+    (-> (just 1)
         (bind inc)) => (throws IllegalStateException)
 
     (-> [:a :b :c]
@@ -56,69 +55,69 @@
         (result)) => ["a" "c"]))
 
 (facts "for chain"
-  (chain (maybe 1)
+  (chain (just 1)
     #(+ % 1)
     #(+ % 1)
-    #(- % 1)) => (maybe 2)
+    #(- % 1)) => (just 2)
 
-  (chain (maybe 1)
+  (chain (just 1)
     (fn [_] nil)
     #(+ % 1)
     #(+ % 1)
     #(- % 1)) => none)
 
 (facts "for resolve"
-  (resolve (maybe 1)
+  (resolve (just 1)
     #(+ % 1)
     #(+ % 1)
     #(- % 1)) => 2
 
-  (resolve (maybe 1)
+  (resolve (just 1)
     (fn [_] nil)
     #(+ % 1)
     #(+ % 1)
     #(- % 1)) => nil)
 
 (facts "for chain->"
-  (chain-> (maybe 1)
+  (chain-> (just 1)
     (+ 1)
-    (* 2)) => (maybe 4)
+    (* 2)) => (just 4)
 
-  (chain-> (maybe 1)
+  (chain-> (just 1)
     ((fn [_] nil))
     (+ 1)
     (* 2)) => none)
 
 (facts "for resolve->"
-  (resolve-> (maybe 1)
+  (resolve-> (just 1)
     (+ 1)
     (* 2)) => 4
 
-  (resolve-> (maybe 1)
+  (resolve-> (just 1)
     ((fn [_] nil))
     (+ 1)
     (* 2)) => nil)
 
 (facts "for maplet"
-  (maplet [[v1 v2] (maybe [1 2])
+  (maplet [[v1 v2] (just [1 2])
            [v3 v4] (vector (inc v1) (inc v2))]
      (+ v1 v2 v3 v4)) => 8
 
-  (maplet [v1 (maybe 1)
-           v2 (maybe v1)
+  (maplet [v1 (just 1)
+           v2 (just v1)
            v3 (map inc v2)]
-    v3) => (maybe 2))
+    v3) => (just 2))
 
 (facts "Monad lows"
-  (-> (maybe 1) (bind #(maybe (inc %))) (result))
+  (-> (just 1) (bind #(just (inc %))) (result))
       => #(= % (inc 1))
 
-  (-> (maybe 1) (bind maybe)) => (maybe 1)
+  (-> (just 1) (bind just)) => (just 1)
 
-  (-> (maybe 1) (bind #(maybe (inc %))) (bind #(maybe (* % 2))))
+  (-> (just 1) (bind #(just (inc %))) (bind #(just (* % 2))))
       => (fn [v]
           (= v
-             (-> (maybe 1)
-                 (bind (fn [x] (-> (maybe (inc x))
-                                   (bind (fn [y] (maybe (* y 2)))))))))))
+             (-> (just 1)
+                 (bind (fn [x] (-> (just (inc x))
+                                   (bind (fn [y] (just (* y 2)))))))))))
 

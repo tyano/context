@@ -46,7 +46,7 @@
   Monad
   (bind [this f] (f this)))
 
-(declare maybe? none)
+(declare just maybe? none)
 
 (deftype Maybe [v]
   Context
@@ -57,7 +57,7 @@
     [this f]
     (if (= this none)
       none
-      (Maybe. (f v))))
+      (just (f v))))
 
   Monad
   (bind
@@ -78,14 +78,14 @@
       :else (= (result a) (result b)))))
 
 (defmethod print-method Maybe
-  [o ^java.io.Writer w]
+  [^Maybe o ^java.io.Writer w]
   (.write w (str (.getCanonicalName (class o)) "[" (.-v o) "]")))
 
 (defn maybe? [c] (instance? Maybe c))
 
-(defonce ^:const none (Maybe. nil))
+(defonce none (Maybe. nil))
 
-(defn maybe [v]
+(defn just [v]
   (if (some? v)
     (Maybe. v)
     none))
