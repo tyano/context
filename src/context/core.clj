@@ -47,17 +47,27 @@
   (bind [this f] (f this)))
 
 
-(defn chain
+(defn map-chain
   [m & fs]
   (reduce #(fmap %1 %2) m fs))
 
-(defmacro chain->
+(defmacro map->
   [m & body]
   (letfn [(parse-expr
             [[h & r :as expr]]
-            `(fn [v#] (~h v# ~@r)))]
+            (let [s (gensym)]
+              `(fn [~s] (~h ~s ~@r))))]
     (let [expr-coll (core/map parse-expr body)]
-      `(chain ~m ~@expr-coll))))
+      `(map-chain ~m ~@expr-coll))))
+
+(defmacro map->>
+  [m & body]
+  (letfn [(parse-expr
+            [[& exprs]]
+            (let [s (gensym)]
+              `(fn [~s] (~@exprs ~s))))]
+    (let [expr-coll (core/map parse-expr body)]
+      `(map-chain ~m ~@expr-coll))))
 
 (defn- expand-context
   ([first? {:keys [syms variables expr]}]

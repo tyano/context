@@ -1,6 +1,7 @@
 (ns context.core-test
   (:refer-clojure :exclude [map resolve])
-  (:require [context.core :refer :all]
+  (:require [clojure.core :as core]
+            [context.core :refer :all]
             [context.maybe :refer [none just]]
             [midje.sweet :refer [fact facts provided throws] :as m]
             [clojure.string :refer [upper-case]]))
@@ -24,27 +25,37 @@
       (bind #(if (= % :b) nil [(name %)]))) => ["a" "c"])
 
 
-(facts "for chain"
-  (chain (just 1)
+(facts "for map-chain"
+  (map-chain (just 1)
     #(+ % 1)
     #(+ % 1)
     #(- % 1)) => (just 2)
 
-  (chain (just 1)
+  (map-chain (just 1)
     (fn [_] nil)
     #(+ % 1)
     #(+ % 1)
     #(- % 1)) => none)
 
-(facts "for chain->"
-  (chain-> (just 1)
+(facts "for map->"
+  (map-> (just 1)
     (+ 1)
     (* 2)) => (just 4)
 
-  (chain-> (just 1)
+  (map-> (just 1)
     ((fn [_] nil))
     (+ 1)
     (* 2)) => none)
+
+(facts "for map->>"
+  (map->> (just [:a :b :c])
+    (core/map name)
+    (core/map upper-case)) => (just '("A" "B" "C"))
+
+  (map->> (just [:a :b :c])
+    (core/map name)
+    ((fn [_] nil))
+    (core/map upper-case) => none))
 
 (facts "for maplet"
   (maplet [[v1 v2] (just [1 2])
