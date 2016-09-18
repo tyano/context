@@ -42,8 +42,8 @@
 
   (-> (just 1) (bind just)) => (just 1)
 
-  (bind-chain (just 1) #(just (inc %)) #(just (* % 2)))
+  (bind> (just 1) #(just (inc %)) #(just (* % 2)))
       => #(= %
-             (bind-chain (just 1)
-                (fn [x] (bind-chain (just (inc x))
-                                    (fn [y] (just (* y 2))))))))
+             (bind> (just 1)
+                (fn [x] (bind> (just (inc x))
+                               (fn [y] (just (* y 2))))))))

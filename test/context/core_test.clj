@@ -25,13 +25,13 @@
       (bind #(if (= % :b) [] [(name %)]))) => ["a" "c"])
 
 
-(facts "for map-chain"
-  (map-chain (just 1)
+(facts "for map>"
+  (map> (just 1)
     #(+ % 1)
     #(+ % 1)
     #(- % 1)) => (just 2)
 
-  (map-chain (just 1)
+  (map> (just 1)
     (fn [_] nil)
     #(+ % 1)
     #(+ % 1)
@@ -67,13 +67,13 @@
            v3 (map inc v2)]
     v3) => (just (just 2)))
 
-(facts "for bind-chain"
-  (bind-chain (just 1)
+(facts "for bind>"
+  (bind> (just 1)
     #(just (+ % 1))
     #(just (+ % 1))
     #(just (- % 1))) => (just 2)
 
-  (bind-chain (just 1)
+  (bind> (just 1)
     (fn [_] none)
     #(just (+ % 1))
     #(just (+ % 1))

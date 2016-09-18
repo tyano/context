@@ -55,7 +55,7 @@
 (defmethod return Object [c v] v)
 
 
-(defn map-chain
+(defn map>
   [m & fs]
   (reduce #(fmap %1 %2) m fs))
 
@@ -66,7 +66,7 @@
             (let [s (gensym)]
               `(fn [~s] (~h ~s ~@r))))]
     (let [expr-coll (core/map parse-expr body)]
-      `(map-chain ~m ~@expr-coll))))
+      `(map> ~m ~@expr-coll))))
 
 (defmacro map->>
   [m & body]
@@ -75,9 +75,9 @@
             (let [s (gensym)]
               `(fn [~s] (~@exprs ~s))))]
     (let [expr-coll (core/map parse-expr body)]
-      `(map-chain ~m ~@expr-coll))))
+      `(map> ~m ~@expr-coll))))
 
-(defn bind-chain
+(defn bind>
   [m & fs]
   (reduce #(bind %1 %2) m fs))
 
@@ -95,7 +95,7 @@
 (defmacro bind->
   [m & body]
   `(let [m# ~m]
-     (apply bind-chain m# (expand-bindfirst-body m# ~body))))
+     (apply bind> m# (expand-bindfirst-body m# ~body))))
 
 
 
@@ -111,7 +111,7 @@
 (defmacro bind->>
   [m & body]
   `(let [m# ~m]
-     (apply bind-chain m# (expand-bindlast-body m# ~body))))
+     (apply bind> m# (expand-bindlast-body m# ~body))))
 
 
 
