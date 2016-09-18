@@ -34,13 +34,19 @@
 
   (toString
     [this]
-    (str (.getCanonicalName (class this)) "[" v "]")))
+    (if (= this none)
+      "none"
+      (str "just[" (pr-str v) "]"))))
 
 (defmethod return Maybe [c v] (just v))
 
 (defmethod print-method Maybe
   [^Maybe o ^java.io.Writer w]
   (.write w (str o)))
+
+(defmethod print-dup Maybe
+  [^Maybe o ^java.io.Writer w]
+  (.write w (str "#=(" (.getName (class o)) ". " (or (pr-str (.-v o)) "nil") ")")))
 
 (defn maybe? [c] (instance? Maybe c))
 
