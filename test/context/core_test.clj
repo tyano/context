@@ -67,3 +67,36 @@
            v3 (map inc v2)]
     v3) => (just 2))
 
+(facts "for bind-chain"
+  (bind-chain (just 1)
+    #(just (+ % 1))
+    #(just (+ % 1))
+    #(just (- % 1))) => (just 2)
+
+  (bind-chain (just 1)
+    (fn [_] none)
+    #(just (+ % 1))
+    #(just (+ % 1))
+    #(just (- % 1)))=> none)
+
+(facts "for bind->"
+  (bind-> (just 1)
+    (+ 1)
+    (* 2)) => (just 4)
+
+  (bind-> (just 1)
+    ((fn [_] nil))
+    (+ 1)
+    (* 2)) => none)
+
+(facts "for bind->>"
+  (bind->> (just [:a :b :c])
+    (core/map name)
+    (core/map upper-case)) => (just '("A" "B" "C"))
+
+  (bind->> (just [:a :b :c])
+    (core/map name)
+    ((fn [_] nil))
+    (core/map upper-case) => none))
+
+

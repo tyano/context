@@ -12,6 +12,8 @@
 (defprotocol Monad
   (bind [_ f] "apply the value contained in this context to f. f must return a new same-kind Context. return the new Context."))
 
+(defmulti return (fn [clazz v] clazz))
+
 (defn map
   [f data]
   (fmap data f))
@@ -26,6 +28,8 @@
   Monad
   (bind [this f] nil))
 
+(defmethod return nil [_ _] nil)
+
 (extend-type clojure.lang.PersistentVector
   Context
   (result [this] (vec this))
@@ -36,6 +40,8 @@
   Monad
   (bind [this f] (vec (mapcat f this))))
 
+(defmethod return clojure.lang.PersistentVector [c v] (vec v))
+
 (extend-type Object
   Context
   (result [this] this)
@@ -45,6 +51,8 @@
 
   Monad
   (bind [this f] (f this)))
+
+(defmethod return Object [c v] v)
 
 
 (defn map-chain
@@ -68,6 +76,44 @@
               `(fn [~s] (~@exprs ~s))))]
     (let [expr-coll (core/map parse-expr body)]
       `(map-chain ~m ~@expr-coll))))
+
+(defn bind-chain
+  [m & fs]
+  (reduce #(bind %1 %2) m fs))
+
+
+
+(defn expand-bindfirst-expr
+  [m [h & r :as expr]]
+  (let [s (gensym)]
+    `(fn [~s] (return (class ~m) (~h ~s ~@r)))))
+
+(defmacro expand-bindfirst-body
+  [m body]
+  (vec (core/map #(expand-bindfirst-expr m %) body)))
+
+(defmacro bind->
+  [m & body]
+  `(let [m# ~m]
+     (apply bind-chain m# (expand-bindfirst-body m# ~body))))
+
+
+
+(defn expand-bindlast-expr
+  [m [& exprs]]
+  (let [s (gensym)]
+    `(fn [~s] (return (class ~m) (~@exprs ~s)))))
+
+(defmacro  expand-bindlast-body
+  [m body]
+  (vec (core/map #(expand-bindlast-expr m %) body)))
+
+(defmacro bind->>
+  [m & body]
+  `(let [m# ~m]
+     (apply bind-chain m# (expand-bindlast-body m# ~body))))
+
+
 
 (defn- expand-context
   ([first? {:keys [syms variables expr]}]

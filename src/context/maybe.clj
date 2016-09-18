@@ -1,5 +1,5 @@
 (ns context.maybe
-  (:require [context.core :refer [Context Functor Monad result]]))
+  (:require [context.core :refer [Context Functor Monad result return]]))
 
 (declare just maybe? none)
 
@@ -31,6 +31,8 @@
       (identical? a b) true
       (not (maybe? b)) false
       :else (= (result a) (result b)))))
+
+(defmethod return Maybe [c v] (just v))
 
 (defmethod print-method Maybe
   [^Maybe o ^java.io.Writer w]
