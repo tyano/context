@@ -35,14 +35,15 @@
       (bind inc)) => (throws IllegalStateException))
 
 (facts "Monad lows"
-  (-> (just 1) (bind #(just (inc %))) (result))
+  (-> (just 1)
+    (bind #(just (inc %)))
+    (result))
       => #(= % (inc 1))
 
   (-> (just 1) (bind just)) => (just 1)
 
-  (-> (just 1) (bind #(just (inc %))) (bind #(just (* % 2))))
-      => (fn [v]
-          (= v
-             (-> (just 1)
-                 (bind (fn [x] (-> (just (inc x))
-                                   (bind (fn [y] (just (* y 2)))))))))))
+  (bind-chain (just 1) #(just (inc %)) #(just (* % 2)))
+      => #(= %
+             (bind-chain (just 1)
+                (fn [x] (bind-chain (just (inc x))
+                                    (fn [y] (just (* y 2))))))))

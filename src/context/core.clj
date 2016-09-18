@@ -115,23 +115,6 @@
 
 
 
-(defn- expand-context
-  ([first? {:keys [syms variables expr]}]
-    (if (seq syms)
-      (let [[sym & symr] syms
-            [v & vr] variables
-            next-expr (expand-context false {:syms symr :variables vr :expr expr})]
-        (if first?
-          `(fmap ~sym (fn [~v] ~next-expr))
-          `(result (fmap ~sym (fn [~v] ~next-expr)))))
-      `~expr))
-  ([ctx]
-    (expand-context true ctx)))
-
-(defn- expand-binding
-  [{:keys [sym syms variable variables expr] :as ctx}]
-  `[~sym ~(expand-context ctx)])
-
 (defn- build-binding-context
   [first-data data-coll]
   (reduce
@@ -144,19 +127,36 @@
     first-data
     data-coll))
 
-(defmacro expand-let
+(defn- maplet-expand-context
+  ([first? {:keys [syms variables expr]}]
+    (if (seq syms)
+      (let [[sym & symr] syms
+            [v & vr] variables
+            next-expr (maplet-expand-context false {:syms symr :variables vr :expr expr})]
+        (if first?
+          `(fmap ~sym (fn [~v] ~next-expr))
+          `(result (fmap ~sym (fn [~v] ~next-expr)))))
+      `~expr))
+  ([ctx]
+    (maplet-expand-context true ctx)))
+
+(defn- maplet-expand-binding
+  [{:keys [sym syms variable variables expr] :as ctx}]
+  `[~sym ~(maplet-expand-context ctx)])
+
+(defmacro maplet-expand-let
   [binding-context body-context]
   (if-not (seq binding-context)
-    `(result ~(expand-context body-context))
-    `(let ~(expand-binding (first binding-context))
-        (expand-let ~(rest binding-context) ~body-context))))
+    (maplet-expand-context body-context)
+    `(let ~(maplet-expand-binding (first binding-context))
+        (maplet-expand-let ~(rest binding-context) ~body-context))))
 
 (defmacro maplet
-  "(maplet [[v1 v2] (maybe [1 2])
+  "(maplet [[v1 v2] (just [1 2])
             [v3 v4] (vector (inc v1) (inc v2))]
      (+ v1 v2 v3 v4))
 
-   => 8"
+   => (just 8)"
   [bindings & body]
   (let [[[variable expr] & others] (partition 2 bindings)
         binding-context (build-binding-context [{:sym (gensym),
@@ -168,4 +168,46 @@
         body-context    {:syms (core/map :sym binding-context),
                                          :variables (core/map :variable binding-context)
                                          :expr `(do ~@body)}]
-    `(expand-let ~binding-context ~body-context)))
+    `(maplet-expand-let ~binding-context ~body-context)))
+
+
+
+
+(defn- bindlet-expand-context
+  [{:keys [syms variables expr]}]
+  (if (seq syms)
+    (let [[sym & symr] syms
+          [v & vr] variables
+          next-expr (bindlet-expand-context {:syms symr :variables vr :expr expr})]
+        `(bind ~sym (fn [~v] ~next-expr)))
+    `~expr))
+
+(defn- bindlet-expand-binding
+  [{:keys [sym syms variable variables expr] :as ctx}]
+  `[~sym ~(bindlet-expand-context ctx)])
+
+(defmacro bindlet-expand-let
+  [binding-context body-context]
+  (if-not (seq binding-context)
+    (bindlet-expand-context body-context)
+    `(let ~(bindlet-expand-binding (first binding-context))
+        (bindlet-expand-let ~(rest binding-context) ~body-context))))
+
+(defmacro bindlet
+  "(bindlet [[v1 v2] (just [1 2])
+             [v3 v4] (just (vector (inc v1) (inc v2)))]
+     (just (+ v1 v2 v3 v4)))
+
+   => (just 8)"
+  [bindings & body]
+  (let [[[variable expr] & others] (partition 2 bindings)
+        binding-context (build-binding-context [{:sym (gensym),
+                                                 :variable variable
+                                                 :syms []
+                                                 :variables []
+                                                 :expr expr}]
+                                                others)
+        body-context    {:syms (core/map :sym binding-context),
+                                         :variables (core/map :variable binding-context)
+                                         :expr `(do ~@body)}]
+    `(bindlet-expand-let ~binding-context ~body-context)))

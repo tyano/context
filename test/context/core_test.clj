@@ -22,7 +22,7 @@
       (bind #(vec (repeat % "A")))) => ["A" "A" "A" "A" "A" "A"]
 
   (-> [:a :b :c]
-      (bind #(if (= % :b) nil [(name %)]))) => ["a" "c"])
+      (bind #(if (= % :b) [] [(name %)]))) => ["a" "c"])
 
 
 (facts "for map-chain"
@@ -60,12 +60,12 @@
 (facts "for maplet"
   (maplet [[v1 v2] (just [1 2])
            [v3 v4] (vector (inc v1) (inc v2))]
-     (+ v1 v2 v3 v4)) => 8
+     (+ v1 v2 v3 v4)) => (just 8)
 
   (maplet [v1 (just 1)
            v2 (just v1)
            v3 (map inc v2)]
-    v3) => (just 2))
+    v3) => (just (just 2)))
 
 (facts "for bind-chain"
   (bind-chain (just 1)
@@ -99,4 +99,23 @@
     ((fn [_] nil))
     (core/map upper-case) => none))
 
+
+(facts "for bindlet"
+  (bindlet [[v1 v2] (just [1 2])
+            [v3 v4] (just (vector (inc v1) (inc v2)))]
+     (just (+ v1 v2 v3 v4))) => (just 8)
+
+  (bindlet [v1 (just 1)
+            v2 (just v1)
+            v3 (just (inc v2))]
+    (just v3)) => (just 2)
+
+  (bindlet [v1 (just 1)
+            v2 (just (+ v1 1))]
+    (just (* v2 2))) => (just 4)
+
+  (bindlet [v1 (just 1)
+            v2 none
+            v3 (just (+ v1 v2))]
+    (just v3)) => none)
 

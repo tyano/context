@@ -30,13 +30,17 @@
     (cond
       (identical? a b) true
       (not (maybe? b)) false
-      :else (= (result a) (result b)))))
+      :else (= (result a) (result b))))
+
+  (toString
+    [this]
+    (str (.getCanonicalName (class this)) "[" v "]")))
 
 (defmethod return Maybe [c v] (just v))
 
 (defmethod print-method Maybe
   [^Maybe o ^java.io.Writer w]
-  (.write w (str (.getCanonicalName (class o)) "[" (.-v o) "]")))
+  (.write w (str o)))
 
 (defn maybe? [c] (instance? Maybe c))
 
