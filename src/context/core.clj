@@ -1,5 +1,5 @@
 (ns context.core
-  (:refer-clojure :exclude [resolve map flatten])
+  (:refer-clojure :exclude [map flatten])
   (:require [clojure.core :as core]
             [clojure.tools.logging :refer [debug info]]))
 
@@ -51,11 +51,6 @@
   [m & fs]
   (reduce #(fmap %1 %2) m fs))
 
-(defn resolve
-  [m & fs]
-  (-> (apply chain m fs)
-      (result)))
-
 (defmacro chain->
   [m & body]
   (letfn [(parse-expr
@@ -63,10 +58,6 @@
             `(fn [v#] (~h v# ~@r)))]
     (let [expr-coll (core/map parse-expr body)]
       `(chain ~m ~@expr-coll))))
-
-(defmacro resolve->
-  [m & body]
-  `(result (chain-> ~m ~@body)))
 
 (defn- expand-context
   ([first? {:keys [syms variables expr]}]

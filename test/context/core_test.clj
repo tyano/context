@@ -36,18 +36,6 @@
     #(+ % 1)
     #(- % 1)) => none)
 
-(facts "for resolve"
-  (resolve (just 1)
-    #(+ % 1)
-    #(+ % 1)
-    #(- % 1)) => 2
-
-  (resolve (just 1)
-    (fn [_] nil)
-    #(+ % 1)
-    #(+ % 1)
-    #(- % 1)) => nil)
-
 (facts "for chain->"
   (chain-> (just 1)
     (+ 1)
@@ -57,16 +45,6 @@
     ((fn [_] nil))
     (+ 1)
     (* 2)) => none)
-
-(facts "for resolve->"
-  (resolve-> (just 1)
-    (+ 1)
-    (* 2)) => 4
-
-  (resolve-> (just 1)
-    ((fn [_] nil))
-    (+ 1)
-    (* 2)) => nil)
 
 (facts "for maplet"
   (maplet [[v1 v2] (just [1 2])
